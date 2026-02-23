@@ -860,6 +860,10 @@ body {
     background: var(--secondary);
 }
 
+.fab-tertiary {
+    background: var(--warning);
+}
+
 /* Responsive FAB */
 @media (max-width: 768px) {
     .fab-container {

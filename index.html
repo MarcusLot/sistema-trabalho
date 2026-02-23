@@ -14,7 +14,7 @@
     <div class="login-screen" id="loginScreen">
         <div class="login-card">
             <div class="login-header">
-                <h1>📋 Sistema Pro</h1>
+                <h1>Sistema Pro</h1>
                 <p>Faça login para continuar</p>
             </div>
             <form id="loginForm">
@@ -31,7 +31,7 @@
                     <label for="rememberMe">Lembre-me</label>
                 </div>
                 <button type="submit" class="btn btn-primary">
-                    🚀 Entrar
+                    Entrar
                 </button>
             </form>
         </div>
@@ -55,12 +55,12 @@
         <nav class="nav">
             <div class="container">
                 <ul class="nav-list" id="navList">
-                    <li class="nav-item"><a href="#" class="nav-link active" data-page="dashboard">📊 Dashboard</a></li>
-                    <li class="nav-item"><a href="#" class="nav-link" data-page="tasks">📋 Tarefas</a></li>
-                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="people">👥 Pessoas</a></li>
-                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="stores">🏪 Lojas</a></li>
-                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="permissions">⚙️ Permissões</a></li>
-                    <li class="nav-item"><a href="#" class="nav-link" id="logoutBtn">🚪 Sair</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link" data-page="tasks">Tarefas</a></li>
+                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="people">Pessoas</a></li>
+                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="stores">Lojas</a></li>
+                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="permissions">Permissões</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link" id="logoutBtn">Sair</a></li>
                 </ul>
             </div>
         </nav>
@@ -192,6 +192,37 @@
                                     <td colspan="7" class="text-center">
                                         <div class="empty-state">
                                             <p>Nenhuma pessoa cadastrada</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stores Page -->
+                <div class="page" id="storesPage">
+                    <div class="page-header">
+                        <h1 class="page-title">Lojas</h1>
+                        <p class="page-subtitle">Gerencie as lojas do sistema</p>
+                    </div>
+
+                    <div class="card">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Código</th>
+                                    <th>Endereço</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="storesTable">
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="empty-state">
+                                            <p>Nenhuma loja cadastrada</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -395,11 +426,154 @@
         </div>
     </div>
 
+    <!-- Add Store Modal -->
+    <div id="addStoreModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Adicionar Loja</h2>
+                <button class="modal-close" onclick="closeModal('addStoreModal')">&times;</button>
+            </div>
+            <form id="addStoreForm">
+                <div class="form-group">
+                    <label for="storeName">Nome da Loja</label>
+                    <input type="text" id="storeName" placeholder="Nome da loja" required>
+                </div>
+                <div class="form-group">
+                    <label for="storeCode">Código</label>
+                    <input type="text" id="storeCode" placeholder="Código da loja" required>
+                </div>
+                <div class="form-group">
+                    <label for="storeAddress">Endereço</label>
+                    <input type="text" id="storeAddress" placeholder="Endereço completo" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addStoreModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar Loja</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div id="editEmployeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Funcionário</h2>
+                <button class="modal-close" onclick="closeModal('editEmployeeModal')">&times;</button>
+            </div>
+            <form id="editEmployeeForm">
+                <input type="hidden" id="editEmployeeId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editEmployeeName">Nome Completo</label>
+                        <input type="text" id="editEmployeeName" placeholder="Nome do funcionário" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEmployeeStore">Loja</label>
+                        <select id="editEmployeeStore" required>
+                            <option value="">Selecione uma loja</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editEmployeeEmail">Email</label>
+                        <input type="email" id="editEmployeeEmail" placeholder="email@exemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEmployeePhone">Telefone</label>
+                        <input type="tel" id="editEmployeePhone" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editEmployeePassword">Nova Senha (deixe em branco para manter atual)</label>
+                        <input type="password" id="editEmployeePassword" placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div class="form-group">
+                        <label for="editEmployeeRole">Tipo de Usuário</label>
+                        <select id="editEmployeeRole" required>
+                            <option value="employee">Funcionário</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editEmployeeModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Store Modal -->
+    <div id="editStoreModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Loja</h2>
+                <button class="modal-close" onclick="closeModal('editStoreModal')">&times;</button>
+            </div>
+            <form id="editStoreForm">
+                <input type="hidden" id="editStoreId">
+                <div class="form-group">
+                    <label for="editStoreName">Nome da Loja</label>
+                    <input type="text" id="editStoreName" placeholder="Nome da loja" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStoreCode">Código</label>
+                    <input type="text" id="editStoreCode" placeholder="Código da loja" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStoreAddress">Endereço</label>
+                    <input type="text" id="editStoreAddress" placeholder="Endereço completo" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editStoreModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Usuário</h2>
+                <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+            </div>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label for="editUserName">Nome Completo</label>
+                    <input type="text" id="editUserName" placeholder="Nome do usuário" required>
+                </div>
+                <div class="form-group">
+                    <label for="editUserEmail">Email</label>
+                    <input type="email" id="editUserEmail" placeholder="email@exemplo.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="editUserPassword">Nova Senha (deixe em branco para manter atual)</label>
+                    <input type="password" id="editUserPassword" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="form-group">
+                    <label for="editUserRole">Tipo de Usuário</label>
+                    <select id="editUserRole" required>
+                        <option value="employee">Funcionário</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Floating Action Buttons -->
     <div class="fab-container">
-        <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
-            +
-        </button>
+        <!-- Botões serão adicionados dinamicamente via JavaScript -->
     </div>
 
     <script src="script.js"></script>

@@ -72,6 +72,44 @@ function setupEventListeners() {
     document.getElementById('modalEmployeeForm')?.addEventListener('submit', handleCreateEmployee);
     document.getElementById('modalUserForm')?.addEventListener('submit', handleCreateUser);
     document.getElementById('modalPermissionsForm')?.addEventListener('submit', handleSavePermissions);
+    document.getElementById('permissionsForm')?.addEventListener('submit', handleSavePermissions);
+    document.getElementById('addStoreForm')?.addEventListener('submit', handleCreateStore);
+    
+    // Edit forms
+    document.getElementById('editEmployeeForm')?.addEventListener('submit', handleEditEmployee);
+    document.getElementById('editStoreForm')?.addEventListener('submit', handleEditStore);
+    document.getElementById('editUserForm')?.addEventListener('submit', handleEditUser);
+    
+    // Phone formatting
+    document.getElementById('modalEmployeePhone')?.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
+        
+        if (value.length > 10) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+        }
+        
+        e.target.value = value;
+    });
+    
+    document.getElementById('editEmployeePhone')?.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
+        
+        if (value.length > 10) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+        }
+        
+        e.target.value = value;
+    });
     
     // Tab switching (removido - agora usa botões diretos)
     
@@ -99,13 +137,30 @@ function setupEventListeners() {
 
 // Modal functions (globais)
 function showAddEmployeeModal() {
+    // Show modal first
     document.getElementById('addEmployeeModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Then load stores with delay
+    setTimeout(() => {
+        loadStoresSelect('modalEmployeeStore');
+    }, 100);
+}
+
+function showAddStoreModal() {
+    document.getElementById('addStoreModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
 
 function showPermissionsModal() {
+    // Show modal first
     document.getElementById('permissionsModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
+    
+    // Then load employees with delay
+    setTimeout(() => {
+        loadEmployeesForPermissions();
+    }, 100);
 }
 
 function closeModal(modalId) {
@@ -240,22 +295,57 @@ function updateFloatingButtons() {
     if (!fabContainer) return;
 
     if (currentUser.role === 'admin') {
-        // Admin: Show both buttons
-        fabContainer.innerHTML = `
-            <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
-                +
-            </button>
-            <button class="fab fab-secondary" onclick="showPermissionsModal()" title="Gerenciar Permissões">
-                ⚙
-            </button>
-        `;
+        // Admin: Show buttons based on current page
+        switch(currentPage) {
+            case 'people':
+                fabContainer.innerHTML = `
+                    <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+                        +
+                    </button>
+                `;
+                break;
+            case 'stores':
+                fabContainer.innerHTML = `
+                    <button class="fab fab-secondary" onclick="showAddStoreModal()" title="Adicionar Loja">
+                        +
+                    </button>
+                `;
+                break;
+            case 'permissions':
+                fabContainer.innerHTML = `
+                    <button class="fab fab-tertiary" onclick="showPermissionsModal()" title="Gerenciar Permissões">
+                        +
+                    </button>
+                `;
+                break;
+            case 'dashboard':
+                fabContainer.innerHTML = `
+                    <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+                        +
+                    </button>
+                    <button class="fab fab-secondary" onclick="showAddStoreModal()" title="Adicionar Loja">
+                        L
+                    </button>
+                    <button class="fab fab-tertiary" onclick="showPermissionsModal()" title="Gerenciar Permissões">
+                        P
+                    </button>
+                `;
+                break;
+            default:
+                // tasks e outras páginas: não mostrar botões
+                fabContainer.innerHTML = '';
+        }
     } else {
-        // Employee: Show only add employee button
-        fabContainer.innerHTML = `
-            <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
-                +
-            </button>
-        `;
+        // Employee: Show only add employee button when on people page
+        if (currentPage === 'people') {
+            fabContainer.innerHTML = `
+                <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+                    +
+                </button>
+            `;
+        } else {
+            fabContainer.innerHTML = '';
+        }
     }
 }
 
@@ -336,6 +426,10 @@ function navigateToPage(page) {
             break;
         case 'stores':
             loadStores();
+            break;
+        case 'permissions':
+            loadEmployeesForPermissions();
+            loadPermissions();
             break;
     }
 }
@@ -433,23 +527,28 @@ function createTaskElement(task) {
             <div class="task-recipient">${recipientInfo}</div>
             <div style="display: flex; gap: 8px;">
                 <span class="task-status" style="background: ${priorityColors[task.priority] || '#64748b'}20; color: ${priorityColors[task.priority] || '#64748b'}">
-                    ${task.priority === 'urgent' ? '🔴' : task.priority === 'normal' ? '🔵' : '⚪'} ${task.priority || 'normal'}
+                    ${task.priority === 'urgent' ? 'Urgente' : task.priority === 'normal' ? 'Normal' : 'Baixa'}
                 </span>
                 <span class="task-status" style="background: ${statusColors[task.status] || '#f59e0b'}20; color: ${statusColors[task.status] || '#f59e0b'}">
-                    ${task.status === 'completed' ? '✅' : '⏳'} ${task.status || 'pending'}
+                    ${task.status === 'completed' ? 'Concluída' : 'Pendente'}
                 </span>
-                ${task.assignedToType === 'user' ? '<span class="task-status" style="background: #f59e0b20; color: #f59e0b">👤 Usuário</span>' : ''}
-                ${task.assignedToType === 'admin' ? '<span class="task-status" style="background: #2563eb20; color: #2563eb">👨‍💼 Administrador</span>' : ''}
+                ${task.assignedToType === 'user' ? '<span class="task-status" style="background: #f59e0b20; color: #f59e0b">Usuário</span>' : ''}
+                ${task.assignedToType === 'admin' ? '<span class="task-status" style="background: #2563eb20; color: #2563eb">Administrador</span>' : ''}
             </div>
         </div>
         <div class="task-description">${task.description}</div>
         <div class="task-meta">
-            <span>📅 ${createdAt}</span>
-            ${task.status !== 'completed' ? `
-                <button class="btn btn-primary" onclick="completeTask('${task.id}')" style="padding: 4px 8px; font-size: 12px;">
-                    ✅ Concluir
+            <span>${createdAt}</span>
+            <div style="display: flex; gap: 8px;">
+                ${task.status !== 'completed' ? `
+                    <button class="btn btn-success" onclick="completeTask('${task.id}')" style="padding: 4px 8px; font-size: 12px;">
+                        ✓ Concluir
+                    </button>
+                ` : ''}
+                <button class="btn btn-danger" onclick="deleteTask('${task.id}')" style="padding: 4px 8px; font-size: 12px;">
+                    🗑️ Excluir
                 </button>
-            ` : ''}
+            </div>
         </div>
     `;
 
@@ -662,36 +761,180 @@ function loadStores() {
             const store = stores[storeId];
             const tr = document.createElement('tr');
             
-            let employeeCount = 0;
-            database.ref('employees').once('value', (empSnapshot) => {
-                const employees = empSnapshot.val();
-                if (employees) {
-                    for (let empId in employees) {
-                        if (employees[empId].storeId === storeId) {
-                            employeeCount++;
-                        }
-                    }
-                }
-                tr.querySelector('.employee-count').textContent = employeeCount;
-            });
-            
             tr.innerHTML = `
                 <td>${store.name}</td>
                 <td>${store.code}</td>
                 <td>${store.address || 'Não informado'}</td>
-                <td class="employee-count">0</td>
+                <td><span class="task-status status-pending">Ativa</span></td>
                 <td>
                     <button class="btn btn-primary" onclick="editStore('${storeId}')" style="padding: 4px 8px; font-size: 12px;">
-                        ✏️ Editar
+                        Editar
                     </button>
                     <button class="btn btn-danger" onclick="deleteStore('${storeId}')" style="padding: 4px 8px; font-size: 12px;">
-                        🗑️ Excluir
+                        Excluir
                     </button>
                 </td>
             `;
             
             storesTable.appendChild(tr);
         }
+    });
+}
+
+function loadStoresSelect(selectId = 'modalEmployeeStore') {
+    database.ref('stores').once('value', (snapshot) => {
+        const stores = snapshot.val();
+        const select = document.getElementById(selectId);
+        
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Selecione uma loja</option>';
+        
+        if (stores) {
+            for (let storeId in stores) {
+                const store = stores[storeId];
+                const option = document.createElement('option');
+                option.value = storeId;
+                option.textContent = `${store.name} (${store.code})`;
+                select.appendChild(option);
+            }
+        }
+    });
+}
+
+function handleEditEmployee(e) {
+    e.preventDefault();
+    
+    const employeeId = document.getElementById('editEmployeeId').value;
+    const name = document.getElementById('editEmployeeName').value;
+    const storeId = document.getElementById('editEmployeeStore').value;
+    const email = document.getElementById('editEmployeeEmail').value;
+    const phone = document.getElementById('editEmployeePhone').value;
+    const password = document.getElementById('editEmployeePassword').value;
+    const role = document.getElementById('editEmployeeRole').value;
+    
+    if (!name || !storeId || !email) {
+        showNotification('❌ Preencha todos os campos obrigatórios!');
+        return;
+    }
+    
+    if (password && password.length < 6) {
+        showNotification('❌ A senha deve ter pelo menos 6 caracteres!');
+        return;
+    }
+    
+    database.ref('stores/' + storeId).once('value', (snapshot) => {
+        const store = snapshot.val();
+        
+        const employee = {
+            name: name,
+            storeId: storeId,
+            storeName: store.name,
+            email: email,
+            phone: phone,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Update employee
+        database.ref('employees/' + employeeId).update(employee).then(() => {
+            // Also update user if password or role changed
+            if (password || role) {
+                const userUpdate = { updatedAt: firebase.database.ServerValue.TIMESTAMP };
+                if (password) userUpdate.password = password;
+                if (role) userUpdate.role = role;
+                
+                // Find user by email and update
+                database.ref('users').orderByChild('email').equalTo(email).once('value', (snapshot) => {
+                    const users = snapshot.val();
+                    if (users) {
+                        const userId = Object.keys(users)[0];
+                        database.ref('users/' + userId).update(userUpdate);
+                    }
+                });
+            }
+            
+            document.getElementById('editEmployeeForm').reset();
+            closeModal('editEmployeeModal');
+            showNotification('✅ Funcionário atualizado com sucesso!');
+            loadEmployees();
+            loadDashboardData();
+        }).catch((error) => {
+            showNotification('❌ Erro ao atualizar funcionário!');
+            console.error(error);
+        });
+    });
+}
+
+function handleEditStore(e) {
+    e.preventDefault();
+    
+    const storeId = document.getElementById('editStoreId').value;
+    const name = document.getElementById('editStoreName').value;
+    const code = document.getElementById('editStoreCode').value;
+    const address = document.getElementById('editStoreAddress').value;
+    
+    if (!name || !code || !address) {
+        showNotification('❌ Preencha todos os campos!');
+        return;
+    }
+    
+    const store = {
+        name: name,
+        code: code,
+        address: address,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    database.ref('stores/' + storeId).update(store).then(() => {
+        document.getElementById('editStoreForm').reset();
+        closeModal('editStoreModal');
+        showNotification('✅ Loja atualizada com sucesso!');
+        loadStores();
+        loadDashboardData();
+    }).catch((error) => {
+        showNotification('❌ Erro ao atualizar loja!');
+        console.error(error);
+    });
+}
+
+function handleEditUser(e) {
+    e.preventDefault();
+    
+    const userId = document.getElementById('editUserId').value;
+    const name = document.getElementById('editUserName').value;
+    const email = document.getElementById('editUserEmail').value;
+    const password = document.getElementById('editUserPassword').value;
+    const role = document.getElementById('editUserRole').value;
+    
+    if (!name || !email) {
+        showNotification('❌ Preencha todos os campos obrigatórios!');
+        return;
+    }
+    
+    if (password && password.length < 6) {
+        showNotification('❌ A senha deve ter pelo menos 6 caracteres!');
+        return;
+    }
+    
+    const user = {
+        name: name,
+        email: email,
+        role: role,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    if (password) {
+        user.password = password;
+    }
+    
+    database.ref('users/' + userId).update(user).then(() => {
+        document.getElementById('editUserForm').reset();
+        closeModal('editUserModal');
+        showNotification('✅ Usuário atualizado com sucesso!');
+        loadEmployees();
+    }).catch((error) => {
+        showNotification('❌ Erro ao atualizar usuário!');
+        console.error(error);
     });
 }
 
@@ -711,7 +954,6 @@ function loadEmployeesSelect() {
                 const option = document.createElement('option');
                 option.value = employeeId;
                 
-                // Format display name with more info
                 let displayName = employee.name;
                 if (employee.storeName) {
                     displayName += ` - ${employee.storeName}`;
@@ -725,7 +967,6 @@ function loadEmployeesSelect() {
             }
         }
         
-        // Also load admin users
         database.ref('users').once('value', (userSnapshot) => {
             const users = userSnapshot.val();
             if (users) {
@@ -746,26 +987,6 @@ function loadEmployeesSelect() {
     });
 }
 
-function loadStoresSelect() {
-    database.ref('stores').once('value', (snapshot) => {
-        const stores = snapshot.val();
-        const select = document.getElementById('employeeStore');
-        
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">Selecione uma loja</option>';
-        
-        if (stores) {
-            for (let storeId in stores) {
-                const store = stores[storeId];
-                const option = document.createElement('option');
-                option.value = storeId;
-                option.textContent = `${store.name} (${store.code})`;
-                select.appendChild(option);
-            }
-        }
-    });
-}
 
 function handleCreateTask(e) {
     e.preventDefault();
@@ -923,7 +1144,7 @@ function handleCreateStore(e) {
     };
     
     database.ref('stores').push(store).then(() => {
-        document.getElementById('createStoreForm').reset();
+        document.getElementById('addStoreForm').reset();
         showNotification('✅ Loja adicionada com sucesso!');
         loadStores();
     }).catch((error) => {
@@ -959,7 +1180,7 @@ function handleCreateUser(e) {
     };
     
     database.ref('users').push(user).then(() => {
-        document.getElementById('createUserForm').reset();
+        document.getElementById('modalUserForm').reset();
         showNotification('✅ Usuário criado com sucesso!');
         loadUsers();
     }).catch((error) => {
@@ -979,6 +1200,19 @@ function completeTask(taskId) {
             loadDashboardData();
         }).catch((error) => {
             showNotification('❌ Erro ao concluir tarefa!');
+            console.error(error);
+        });
+    }
+}
+
+function deleteTask(taskId) {
+    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
+        database.ref('tasks/' + taskId).remove().then(() => {
+            showNotification('✅ Tarefa excluída com sucesso!');
+            loadTasks();
+            loadDashboardData();
+        }).catch((error) => {
+            showNotification('❌ Erro ao excluir tarefa!');
             console.error(error);
         });
     }
@@ -1022,15 +1256,63 @@ function deleteUser(userId) {
 }
 
 function editEmployee(employeeId) {
-    showNotification('🔧 Funcionalidade de edição em desenvolvimento!');
+    database.ref('employees/' + employeeId).once('value', (snapshot) => {
+        const employee = snapshot.val();
+        if (!employee) return;
+
+        // Show modal first
+        document.getElementById('editEmployeeModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+
+        // Then load stores and fill form
+        setTimeout(() => {
+            loadStoresSelect('editEmployeeStore');
+            
+            // Fill form with employee data
+            document.getElementById('editEmployeeId').value = employeeId;
+            document.getElementById('editEmployeeName').value = employee.name;
+            document.getElementById('editEmployeeEmail').value = employee.email;
+            document.getElementById('editEmployeePhone').value = employee.phone || '';
+            document.getElementById('editEmployeeStore').value = employee.storeId || '';
+            document.getElementById('editEmployeePassword').value = ''; // Don't show current password
+            document.getElementById('editEmployeeRole').value = employee.role || 'employee';
+        }, 100);
+    });
 }
 
 function editStore(storeId) {
-    showNotification('🔧 Funcionalidade de edição em desenvolvimento!');
+    database.ref('stores/' + storeId).once('value', (snapshot) => {
+        const store = snapshot.val();
+        if (!store) return;
+
+        // Fill form with store data
+        document.getElementById('editStoreId').value = storeId;
+        document.getElementById('editStoreName').value = store.name;
+        document.getElementById('editStoreCode').value = store.code;
+        document.getElementById('editStoreAddress').value = store.address;
+
+        // Show modal
+        document.getElementById('editStoreModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    });
 }
 
 function editUser(userId) {
-    showNotification('🔧 Funcionalidade de edição em desenvolvimento!');
+    database.ref('users/' + userId).once('value', (snapshot) => {
+        const user = snapshot.val();
+        if (!user) return;
+
+        // Fill form with user data
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editUserName').value = user.name;
+        document.getElementById('editUserEmail').value = user.email;
+        document.getElementById('editUserRole').value = user.role;
+        document.getElementById('editUserPassword').value = ''; // Don't show current password
+
+        // Show modal
+        document.getElementById('editUserModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    });
 }
 
 function startRealtimeListeners() {
@@ -1071,27 +1353,46 @@ function startRealtimeListeners() {
     });
 }
 
-function loadPermissions() {
+function loadEmployeesForPermissions() {
     // Load employees for selection (from employees table, not users)
     database.ref('employees').once('value', (snapshot) => {
         const employees = snapshot.val();
+        
+        // Load for main form select
         const select = document.getElementById('permissionEmployee');
+        if (select) {
+            select.innerHTML = '<option value="">Selecione um funcionário</option>';
+            
+            if (employees) {
+                for (let employeeId in employees) {
+                    const employee = employees[employeeId];
+                    const option = document.createElement('option');
+                    option.value = employeeId;
+                    option.textContent = `${employee.name} - ${employee.storeName || 'Sem loja'}`;
+                    select.appendChild(option);
+                }
+            }
+        }
         
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">Selecione um funcionário</option>';
-        
-        if (employees) {
-            for (let employeeId in employees) {
-                const employee = employees[employeeId];
-                const option = document.createElement('option');
-                option.value = employeeId;
-                option.textContent = `${employee.name} - ${employee.storeName || 'Sem loja'}`;
-                select.appendChild(option);
+        // Load for modal select
+        const modalSelect = document.getElementById('modalPermissionEmployee');
+        if (modalSelect) {
+            modalSelect.innerHTML = '<option value="">Selecione um funcionário</option>';
+            
+            if (employees) {
+                for (let employeeId in employees) {
+                    const employee = employees[employeeId];
+                    const option = document.createElement('option');
+                    option.value = employeeId;
+                    option.textContent = `${employee.name} - ${employee.storeName || 'Sem loja'}`;
+                    modalSelect.appendChild(option);
+                }
             }
         }
     });
+}
 
+function loadPermissions() {
     // Load existing permissions
     database.ref('permissions').once('value', (snapshot) => {
         const permissions = snapshot.val();
@@ -1152,14 +1453,22 @@ function loadPermissions() {
 function handleSavePermissions(e) {
     e.preventDefault();
     
-    const employeeId = document.getElementById('permissionEmployee').value;
+    // Try to get from modal first, then from main form
+    let employeeId = document.getElementById('modalPermissionEmployee')?.value;
+    if (!employeeId) {
+        employeeId = document.getElementById('permissionEmployee')?.value;
+    }
+    
     if (!employeeId) {
         showNotification('❌ Selecione um funcionário!');
         return;
     }
     
-    // Get selected permissions
-    const checkboxes = document.querySelectorAll('input[name="permissions"]:checked');
+    // Get selected permissions (try modal first, then main form)
+    let checkboxes = document.querySelectorAll('input[name="modalPermissions"]:checked');
+    if (checkboxes.length === 0) {
+        checkboxes = document.querySelectorAll('input[name="permissions"]:checked');
+    }
     const pages = Array.from(checkboxes).map(cb => cb.value);
     
     // Always include 'tasks' as it's mandatory
@@ -1174,7 +1483,10 @@ function handleSavePermissions(e) {
     };
     
     database.ref('permissions/' + employeeId).set(permissionData).then(() => {
-        document.getElementById('permissionsForm').reset();
+        // Reset both forms
+        document.getElementById('permissionsForm')?.reset();
+        document.getElementById('modalPermissionsForm')?.reset();
+        closeModal('permissionsModal');
         showNotification('✅ Permissões salvas com sucesso!');
         loadPermissions();
     }).catch((error) => {
