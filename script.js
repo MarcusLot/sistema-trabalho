@@ -1,60 +1,19 @@
 // 1. Cole aqui as configurações que você copiou do Firebase
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_PROJETO.firebaseapp.com",
-    databaseURL: "https://SEU_PROJETO.firebaseio.com",
-    projectId: "SEU_PROJETO",
-    storageBucket: "SEU_PROJETO.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
+  apiKey: "AIzaSyC7P_UIuH-Ti1fj9kIyz34uDnHrVDUgMLU",
+  authDomain: "sistematrabalho-f7006.firebaseapp.com",
+  databaseURL: "https://sistematrabalho-f7006-default-rtdb.firebaseio.com",
+  projectId: "sistematrabalho-f7006",
+  storageBucket: "sistematrabalho-f7006.firebasestorage.app",
+  messagingSenderId: "217286716506",
+  appId: "1:217286716506:web:e6f64c2b7250dc7cf2bc63",
+  measurementId: "G-ZWSHVMXQ8R"
 };
 
-// 2. Inicializa o Firebase (com tratamento de erro)
-let database;
-let firebaseConfigurado = false;
-
-try {
-    // Verifica se as credenciais foram configuradas
-    if (firebaseConfig.apiKey === "SUA_API_KEY") {
-        throw new Error("Firebase não configurado");
-    }
-    
-    firebase.initializeApp(firebaseConfig);
-    database = firebase.database();
-    firebaseConfigurado = true;
-    console.log("✅ Firebase inicializado com sucesso!");
-} catch (error) {
-    console.warn("⚠️ Firebase não configurado. Usando modo de demonstração local.");
-    firebaseConfigurado = false;
-    
-    // Cria um banco de dados local simulado
-    const dadosLocais = {
-        tarefas: {}
-    };
-    
-    database = {
-        ref: function(path) {
-            return {
-                push: function(data) {
-                    const id = 'tarefa_' + Date.now();
-                    dadosLocais.tarefas[id] = data;
-                    console.log("💾 Tarefa salva localmente:", data);
-                    return Promise.resolve({ key: id });
-                },
-                on: function(event, callback) {
-                    // Simula dados iniciais
-                    setTimeout(() => {
-                        callback({ val: () => dadosLocais[path] || {} });
-                    }, 100);
-                },
-                remove: function() {
-                    console.log("🗑️ Tarefa removida localmente");
-                    return Promise.resolve();
-                }
-            };
-        }
-    };
-}
+// 2. Inicializa o Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+console.log("✅ Firebase inicializado com sucesso!");
 
 let usuarioAtual = "";
 let perfilAtual = "";
@@ -270,15 +229,6 @@ function mostrarNotificacao(mensagem) {
         }, 300);
     }, 3000);
 }
-
-// Mostra aviso sobre modo de demonstração se Firebase não estiver configurado
-window.addEventListener('load', () => {
-    if (!firebaseConfigurado) {
-        setTimeout(() => {
-            mostrarNotificacao("⚠️ Modo demonstração local. Configure o Firebase para sincronização em tempo real.");
-        }, 1000);
-    }
-});
 
 // Adiciona atalhos de teclado
 document.addEventListener('keydown', (event) => {
