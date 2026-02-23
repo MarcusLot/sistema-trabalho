@@ -11,8 +11,21 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+try {
+    firebase.initializeApp(firebaseConfig);
+    window.database = firebase.database();
+    console.log("✅ Firebase inicializado com sucesso!");
+    
+    // Test connection
+    window.database.ref('.info/connected').on('value', (snapshot) => {
+        const connected = snapshot.val();
+        console.log("🔗 Status da conexão Firebase:", connected ? "Conectado" : "Desconectado");
+    });
+} catch (error) {
+    console.error("❌ Erro ao inicializar Firebase:", error);
+}
+
+const database = window.database;
 
 // Global Variables
 let currentUser = null;
@@ -56,10 +69,16 @@ function setupEventListeners() {
 
 function handleLogin(e) {
     e.preventDefault();
+    console.log("🔐 Tentativa de login iniciada");
+    
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+    
+    console.log("📧 Email digitado:", email);
+    console.log("🔑 Senha digitada:", password ? "***" : "(vazia)");
 
     if (email === 'admin@admin.com' && password === 'admin123') {
+        console.log("✅ Login admin bem-sucedido");
         currentUser = {
             email: email,
             name: 'Administrador',
@@ -69,35 +88,44 @@ function handleLogin(e) {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         showApp();
         showNotification('✅ Login realizado com sucesso!');
-    } else {
-        database.ref('users').once('value', (snapshot) => {
-            const users = snapshot.val();
-            let userFound = false;
-            
-            if (users) {
-                for (let userId in users) {
-                    const user = users[userId];
-                    if (user.email === email && user.password === password) {
-                        currentUser = {
-                            email: user.email,
-                            name: user.name,
-                            role: user.role,
-                            id: userId
-                        };
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                        showApp();
-                        showNotification('✅ Login realizado com sucesso!');
-                        userFound = true;
-                        break;
-                    }
+        return; // Importante: sair da função aqui
+    }
+    
+    console.log("🔍 Verificando usuários no Firebase...");
+    database.ref('users').once('value', (snapshot) => {
+        console.log("📊 Dados recebidos:", snapshot.val());
+        const users = snapshot.val();
+        let userFound = false;
+        
+        if (users) {
+            for (let userId in users) {
+                const user = users[userId];
+                console.log("👤 Verificando usuário:", user.email);
+                if (user.email === email && user.password === password) {
+                    console.log("✅ Usuário encontrado:", user.name);
+                    currentUser = {
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                        id: userId
+                    };
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    showApp();
+                    showNotification('✅ Login realizado com sucesso!');
+                    userFound = true;
+                    break;
                 }
             }
-            
-            if (!userFound) {
-                showNotification('❌ Email ou senha incorretos!');
-            }
-        });
-    }
+        }
+        
+        if (!userFound) {
+            console.log("❌ Nenhum usuário encontrado com essas credenciais");
+            showNotification('❌ Email ou senha incorretos!');
+        }
+    }).catch((error) => {
+        console.error("❌ Erro ao acessar Firebase:", error);
+        showNotification('❌ Erro de conexão com o servidor!');
+    });
 }
 
 function handleLogout() {
