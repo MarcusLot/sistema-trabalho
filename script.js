@@ -40,6 +40,13 @@ const pages = document.querySelectorAll('.page');
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for remembered user first
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+        document.getElementById('loginEmail').value = rememberedEmail;
+        document.getElementById('rememberMe').checked = true;
+    }
+    
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
@@ -62,9 +69,48 @@ function setupEventListeners() {
         });
     });
     document.getElementById('createTaskForm')?.addEventListener('submit', handleCreateTask);
-    document.getElementById('createEmployeeForm')?.addEventListener('submit', handleCreateEmployee);
-    document.getElementById('createStoreForm')?.addEventListener('submit', handleCreateStore);
-    document.getElementById('createUserForm')?.addEventListener('submit', handleCreateUser);
+    document.getElementById('modalEmployeeForm')?.addEventListener('submit', handleCreateEmployee);
+    document.getElementById('modalUserForm')?.addEventListener('submit', handleCreateUser);
+    document.getElementById('modalPermissionsForm')?.addEventListener('submit', handleSavePermissions);
+    
+    // Tab switching (removido - agora usa botões diretos)
+    
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.style.display === 'block') {
+                    modal.style.display = 'none';
+                }
+            });
+            document.body.style.overflow = 'auto';
+        }
+    });
+}
+
+// Modal functions (globais)
+function showAddEmployeeModal() {
+    document.getElementById('addEmployeeModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function showPermissionsModal() {
+    document.getElementById('permissionsModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    document.body.style.overflow = 'auto';
 }
 
 function handleLogin(e) {
@@ -73,12 +119,22 @@ function handleLogin(e) {
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+    const rememberMe = document.getElementById('rememberMe').checked;
     
     console.log("📧 Email digitado:", email);
     console.log("🔑 Senha digitada:", password ? "***" : "(vazia)");
+    console.log("💾 Lembrar usuário:", rememberMe);
 
     if (email === 'admin@admin.com' && password === 'admin123') {
         console.log("✅ Login admin bem-sucedido");
+        
+        // Save email if remember me is checked
+        if (rememberMe) {
+            localStorage.setItem('rememberedEmail', email);
+        } else {
+            localStorage.removeItem('rememberedEmail');
+        }
+        
         currentUser = {
             email: email,
             name: 'Administrador',
@@ -103,6 +159,14 @@ function handleLogin(e) {
                 console.log("👤 Verificando usuário:", user.email);
                 if (user.email === email && user.password === password) {
                     console.log("✅ Usuário encontrado:", user.name);
+                    
+                    // Save email if remember me is checked
+                    if (rememberMe) {
+                        localStorage.setItem('rememberedEmail', email);
+                    } else {
+                        localStorage.removeItem('rememberedEmail');
+                    }
+                    
                     currentUser = {
                         email: user.email,
                         name: user.name,
@@ -154,24 +218,87 @@ function updateUserInterface() {
     const userAvatar = document.getElementById('userAvatar');
     userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
 
-    const adminElements = document.querySelectorAll('.admin-only, .nav-admin-only');
-    adminElements.forEach(element => {
-        if (currentUser.role === 'admin') {
-            element.classList.remove('hidden');
-        } else {
-            element.classList.add('hidden');
-        }
-    });
+    // Apply permissions based on user role and custom permissions
+    applyUserPermissions();
 
+    // Update floating buttons based on user role
+    updateFloatingButtons();
+
+    // Load page-specific data
     if (currentPage === 'tasks') {
         loadTasks();
-    } else if (currentPage === 'employees') {
+        loadEmployeesSelect();
+    } else if (currentPage === 'people') {
         loadEmployees();
     } else if (currentPage === 'stores') {
         loadStores();
-    } else if (currentPage === 'users') {
-        loadUsers();
     }
+}
+
+function updateFloatingButtons() {
+    const fabContainer = document.querySelector('.fab-container');
+    if (!fabContainer) return;
+
+    if (currentUser.role === 'admin') {
+        // Admin: Show both buttons
+        fabContainer.innerHTML = `
+            <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+                +
+            </button>
+            <button class="fab fab-secondary" onclick="showPermissionsModal()" title="Gerenciar Permissões">
+                ⚙
+            </button>
+        `;
+    } else {
+        // Employee: Show only add employee button
+        fabContainer.innerHTML = `
+            <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+                +
+            </button>
+        `;
+    }
+}
+
+function applyUserPermissions() {
+    // Admin always has all permissions
+    if (currentUser.role === 'admin') {
+        document.querySelectorAll('.nav-admin-only').forEach(el => {
+            el.classList.remove('hidden');
+        });
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.classList.remove('hidden');
+        });
+        return;
+    }
+
+    // For employees, check custom permissions
+    database.ref('permissions/' + currentUser.id).once('value', (snapshot) => {
+        const permissions = snapshot.val();
+        const allowedPages = permissions ? permissions.pages : ['tasks']; // Default: only tasks
+
+        // Hide all admin-only elements first
+        document.querySelectorAll('.nav-admin-only').forEach(el => {
+            el.classList.add('hidden');
+        });
+        document.querySelectorAll('.admin-only').forEach(el => {
+            el.classList.add('hidden');
+        });
+
+        // Show only allowed navigation items (NEVER include permissions for employees)
+        allowedPages.forEach(page => {
+            if (page !== 'permissions') { // Employees can never access permissions page
+                const navItem = document.querySelector(`[data-page="${page}"]`);
+                if (navItem) {
+                    navItem.parentElement.classList.remove('hidden');
+                }
+            }
+        });
+
+        // If current page is not allowed, redirect to tasks
+        if (!allowedPages.includes(currentPage)) {
+            navigateToPage('tasks');
+        }
+    });
 }
 
 function navigateToPage(page) {
@@ -185,7 +312,13 @@ function navigateToPage(page) {
     pages.forEach(p => {
         p.classList.remove('active');
     });
-    document.getElementById(page + 'Page').classList.add('active');
+    const targetPage = document.getElementById(page + 'Page');
+    if (targetPage) {
+        targetPage.classList.add('active');
+    } else {
+        console.error('Página não encontrada:', page + 'Page');
+        return;
+    }
 
     currentPage = page;
     updateUserInterface();
@@ -198,15 +331,11 @@ function navigateToPage(page) {
             loadTasks();
             loadEmployeesSelect();
             break;
-        case 'employees':
+        case 'people':
             loadEmployees();
-            loadStoresSelect();
             break;
         case 'stores':
             loadStores();
-            break;
-        case 'users':
-            loadUsers();
             break;
     }
 }
@@ -290,9 +419,18 @@ function createTaskElement(task) {
 
     const createdAt = task.createdAt ? new Date(task.createdAt).toLocaleString('pt-BR') : '';
 
+    // Create recipient info with store if available
+    let recipientInfo = task.employeeName || 'Não atribuído';
+    if (task.storeName && task.storeName !== 'Não atribuído') {
+        recipientInfo += ` - ${task.storeName}`;
+    }
+    if (task.employeeEmail) {
+        recipientInfo += ` (${task.employeeEmail})`;
+    }
+
     li.innerHTML = `
         <div class="task-header">
-            <div class="task-recipient">${task.employeeName || 'Não atribuído'}</div>
+            <div class="task-recipient">${recipientInfo}</div>
             <div style="display: flex; gap: 8px;">
                 <span class="task-status" style="background: ${priorityColors[task.priority] || '#64748b'}20; color: ${priorityColors[task.priority] || '#64748b'}">
                     ${task.priority === 'urgent' ? '🔴' : task.priority === 'normal' ? '🔵' : '⚪'} ${task.priority || 'normal'}
@@ -300,6 +438,8 @@ function createTaskElement(task) {
                 <span class="task-status" style="background: ${statusColors[task.status] || '#f59e0b'}20; color: ${statusColors[task.status] || '#f59e0b'}">
                     ${task.status === 'completed' ? '✅' : '⏳'} ${task.status || 'pending'}
                 </span>
+                ${task.assignedToType === 'user' ? '<span class="task-status" style="background: #f59e0b20; color: #f59e0b">👤 Usuário</span>' : ''}
+                ${task.assignedToType === 'admin' ? '<span class="task-status" style="background: #2563eb20; color: #2563eb">👨‍💼 Administrador</span>' : ''}
             </div>
         </div>
         <div class="task-description">${task.description}</div>
@@ -388,11 +528,16 @@ function loadTasks() {
         const userTasks = [];
         for (let taskId in tasks) {
             const task = tasks[taskId];
-            if (currentUser.role === 'admin' || task.assignedTo === currentUser.id) {
+            
+            // Show tasks assigned to current user or all tasks for admin
+            if (currentUser.role === 'admin') {
+                userTasks.push({ id: taskId, ...task });
+            } else if (task.assignedTo === currentUser.id) {
                 userTasks.push({ id: taskId, ...task });
             }
         }
 
+        // Sort by priority and date
         userTasks.sort((a, b) => {
             const priorityOrder = { urgent: 0, normal: 1, low: 2 };
             if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
@@ -409,46 +554,87 @@ function loadTasks() {
 }
 
 function loadEmployees() {
-    database.ref('employees').once('value', (snapshot) => {
-        const employees = snapshot.val();
-        const employeesTable = document.getElementById('employeesTable');
+    // Load employees
+    database.ref('employees').once('value', (empSnapshot) => {
+        const employees = empSnapshot.val();
         
-        if (!employees || Object.keys(employees).length === 0) {
-            employeesTable.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center">
-                        <div class="empty-state">
-                            <p>Nenhum funcionário cadastrado</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
+        // Load users
+        database.ref('users').once('value', (userSnapshot) => {
+            const users = userSnapshot.val();
+            const peopleTable = document.getElementById('peopleTable');
+            
+            if ((!employees || Object.keys(employees).length === 0) && 
+                (!users || Object.keys(users).length === 0)) {
+                peopleTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="empty-state">
+                                <p>Nenhuma pessoa cadastrada</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
 
-        employeesTable.innerHTML = '';
-        
-        for (let employeeId in employees) {
-            const employee = employees[employeeId];
-            const tr = document.createElement('tr');
+            peopleTable.innerHTML = '';
             
-            tr.innerHTML = `
-                <td>${employee.name}</td>
-                <td>${employee.email}</td>
-                <td>${employee.storeName || 'Não atribuído'}</td>
-                <td><span class="task-status status-pending">Ativo</span></td>
-                <td>
-                    <button class="btn btn-primary" onclick="editEmployee('${employeeId}')" style="padding: 4px 8px; font-size: 12px;">
-                        ✏️ Editar
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteEmployee('${employeeId}')" style="padding: 4px 8px; font-size: 12px;">
-                        🗑️ Excluir
-                    </button>
-                </td>
-            `;
+            // Add employees
+            if (employees) {
+                for (let employeeId in employees) {
+                    const employee = employees[employeeId];
+                    const tr = document.createElement('tr');
+                    
+                    tr.innerHTML = `
+                        <td>${employee.name}</td>
+                        <td>${employee.email}</td>
+                        <td>Funcionário</td>
+                        <td><span class="task-status status-pending">Ativo</span></td>
+                        <td>${employee.storeName || 'Não atribuído'}</td>
+                        <td>${employee.phone || '-'}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="editEmployee('${employeeId}')" style="padding: 4px 8px; font-size: 12px;">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteEmployee('${employeeId}')" style="padding: 4px 8px; font-size: 12px;">
+                                Excluir
+                            </button>
+                        </td>
+                    `;
+                    
+                    peopleTable.appendChild(tr);
+                }
+            }
             
-            employeesTable.appendChild(tr);
-        }
+            // Add users (admins)
+            if (users) {
+                for (let userId in users) {
+                    const user = users[userId];
+                    if (user.role === 'admin') {
+                        const tr = document.createElement('tr');
+                        
+                        tr.innerHTML = `
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>Administrador</td>
+                            <td><span class="task-status status-pending">Ativo</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>
+                                <button class="btn btn-primary" onclick="editUser('${userId}')" style="padding: 4px 8px; font-size: 12px;">
+                                    Editar
+                                </button>
+                                <button class="btn btn-danger" onclick="deleteUser('${userId}')" style="padding: 4px 8px; font-size: 12px;">
+                                    Excluir
+                                </button>
+                            </td>
+                        `;
+                        
+                        peopleTable.appendChild(tr);
+                    }
+                }
+            }
+        });
     });
 }
 
@@ -509,68 +695,54 @@ function loadStores() {
     });
 }
 
-function loadUsers() {
-    database.ref('users').once('value', (snapshot) => {
-        const users = snapshot.val();
-        const usersTable = document.getElementById('usersTable');
-        
-        if (!users || Object.keys(users).length === 0) {
-            usersTable.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center">
-                        <div class="empty-state">
-                            <p>Nenhum usuário encontrado</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        usersTable.innerHTML = '';
-        
-        for (let userId in users) {
-            const user = users[userId];
-            const tr = document.createElement('tr');
-            
-            tr.innerHTML = `
-                <td>${user.name}</td>
-                <td>${user.email}</td>
-                <td>${user.role === 'admin' ? 'Administrador' : 'Funcionário'}</td>
-                <td><span class="task-status status-pending">Ativo</span></td>
-                <td>
-                    <button class="btn btn-primary" onclick="editUser('${userId}')" style="padding: 4px 8px; font-size: 12px;">
-                        ✏️ Editar
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteUser('${userId}')" style="padding: 4px 8px; font-size: 12px;">
-                        🗑️ Excluir
-                    </button>
-                </td>
-            `;
-            
-            usersTable.appendChild(tr);
-        }
-    });
-}
-
 function loadEmployeesSelect() {
+    // Load employees for selection
     database.ref('employees').once('value', (snapshot) => {
         const employees = snapshot.val();
         const select = document.getElementById('taskEmployee');
         
         if (!select) return;
         
-        select.innerHTML = '<option value="">Selecione um funcionário</option>';
+        select.innerHTML = '<option value="">Selecione um destinatário</option>';
         
         if (employees) {
             for (let employeeId in employees) {
                 const employee = employees[employeeId];
                 const option = document.createElement('option');
                 option.value = employeeId;
-                option.textContent = `${employee.name} - ${employee.storeName || 'Sem loja'}`;
+                
+                // Format display name with more info
+                let displayName = employee.name;
+                if (employee.storeName) {
+                    displayName += ` - ${employee.storeName}`;
+                }
+                if (employee.email) {
+                    displayName += ` (${employee.email})`;
+                }
+                
+                option.textContent = displayName;
                 select.appendChild(option);
             }
         }
+        
+        // Also load admin users
+        database.ref('users').once('value', (userSnapshot) => {
+            const users = userSnapshot.val();
+            if (users) {
+                for (let userId in users) {
+                    const user = users[userId];
+                    
+                    // Only include admin users
+                    if (user.role === 'admin') {
+                        const option = document.createElement('option');
+                        option.value = userId;
+                        option.textContent = `${user.name} (${user.email}) - Administrador`;
+                        option.style.color = '#2563eb'; // Blue color for distinction
+                        select.appendChild(option);
+                    }
+                }
+            }
+        });
     });
 }
 
@@ -598,56 +770,103 @@ function loadStoresSelect() {
 function handleCreateTask(e) {
     e.preventDefault();
     
-    const employeeId = document.getElementById('taskEmployee').value;
+    const recipientId = document.getElementById('taskEmployee').value;
     const priority = document.getElementById('taskPriority').value;
     const description = document.getElementById('taskDescription').value;
     
-    if (!employeeId || !description) {
+    if (!recipientId || !description) {
         showNotification('❌ Preencha todos os campos obrigatórios!');
         return;
     }
     
-    database.ref('employees/' + employeeId).once('value', (snapshot) => {
-        const employee = snapshot.val();
+    // Check if it's an employee or admin user
+    database.ref('employees/' + recipientId).once('value', (empSnapshot) => {
+        const employee = empSnapshot.val();
         
-        const task = {
-            assignedTo: employeeId,
-            employeeName: employee.name,
-            priority: priority,
-            description: description,
-            status: 'pending',
-            createdBy: currentUser.id,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        database.ref('tasks').push(task).then(() => {
-            document.getElementById('createTaskForm').reset();
-            showNotification('✅ Tarefa criada com sucesso!');
-            loadTasks();
-            loadDashboardData();
-        }).catch((error) => {
-            showNotification('❌ Erro ao criar tarefa!');
-            console.error(error);
-        });
+        if (employee) {
+            // It's a proper employee record
+            const task = {
+                assignedTo: recipientId,
+                assignedToType: 'employee',
+                employeeName: employee.name,
+                employeeEmail: employee.email,
+                storeName: employee.storeName,
+                priority: priority,
+                description: description,
+                status: 'pending',
+                createdBy: currentUser.id,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            database.ref('tasks').push(task).then(() => {
+                document.getElementById('createTaskForm').reset();
+                showNotification('✅ Tarefa criada com sucesso!');
+                loadTasks();
+                loadDashboardData();
+            }).catch((error) => {
+                showNotification('❌ Erro ao criar tarefa!');
+                console.error(error);
+            });
+        } else {
+            // Check if it's an admin user
+            database.ref('users/' + recipientId).once('value', (userSnapshot) => {
+                const user = userSnapshot.val();
+                
+                if (user && user.role === 'admin') {
+                    const task = {
+                        assignedTo: recipientId,
+                        assignedToType: 'admin',
+                        employeeName: user.name,
+                        employeeEmail: user.email,
+                        storeName: 'Administrador',
+                        priority: priority,
+                        description: description,
+                        status: 'pending',
+                        createdBy: currentUser.id,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                    
+                    database.ref('tasks').push(task).then(() => {
+                        document.getElementById('createTaskForm').reset();
+                        showNotification('✅ Tarefa criada para administrador!');
+                        loadTasks();
+                        loadDashboardData();
+                    }).catch((error) => {
+                        showNotification('❌ Erro ao criar tarefa!');
+                        console.error(error);
+                    });
+                } else {
+                    showNotification('❌ Destinatário não encontrado!');
+                }
+            });
+        }
     });
 }
 
 function handleCreateEmployee(e) {
     e.preventDefault();
     
-    const name = document.getElementById('employeeName').value;
-    const storeId = document.getElementById('employeeStore').value;
-    const email = document.getElementById('employeeEmail').value;
-    const phone = document.getElementById('employeePhone').value;
+    const name = document.getElementById('modalEmployeeName').value;
+    const storeId = document.getElementById('modalEmployeeStore').value;
+    const email = document.getElementById('modalEmployeeEmail').value;
+    const phone = document.getElementById('modalEmployeePhone').value;
+    const password = document.getElementById('modalEmployeePassword').value;
+    const role = document.getElementById('modalEmployeeRole').value;
     
-    if (!name || !storeId || !email) {
+    if (!name || !storeId || !email || !password) {
         showNotification('❌ Preencha todos os campos obrigatórios!');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showNotification('❌ A senha deve ter pelo menos 6 caracteres!');
         return;
     }
     
     database.ref('stores/' + storeId).once('value', (snapshot) => {
         const store = snapshot.val();
         
+        // Criar funcionário
         const employee = {
             name: name,
             storeId: storeId,
@@ -657,13 +876,28 @@ function handleCreateEmployee(e) {
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
         
-        database.ref('employees').push(employee).then(() => {
-            document.getElementById('createEmployeeForm').reset();
-            showNotification('✅ Funcionário adicionado com sucesso!');
+        // Criar usuário para login
+        const user = {
+            email: email,
+            password: password,
+            name: name,
+            role: role,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Salvar ambos os registros
+        Promise.all([
+            database.ref('employees').push(employee),
+            database.ref('users').push(user)
+        ]).then(() => {
+            document.getElementById('modalEmployeeForm').reset();
+            closeModal('addEmployeeModal');
+            showNotification('✅ Funcionário e usuário criados com sucesso!');
             loadEmployees();
+            loadUsers();
             loadDashboardData();
         }).catch((error) => {
-            showNotification('❌ Erro ao adicionar funcionário!');
+            showNotification('❌ Erro ao criar funcionário!');
             console.error(error);
         });
     });
@@ -813,6 +1047,8 @@ function startRealtimeListeners() {
             loadDashboardData();
         } else if (currentPage === 'employees') {
             loadEmployees();
+        } else if (currentPage === 'permissions') {
+            loadPermissions();
         }
     });
 
@@ -823,10 +1059,140 @@ function startRealtimeListeners() {
     });
 
     database.ref('users').on('value', (snapshot) => {
-        if (currentPage === 'users') {
-            loadUsers();
+        if (currentPage === 'people') {
+            loadEmployees();
         }
     });
+
+    database.ref('permissions').on('value', (snapshot) => {
+        if (currentPage === 'permissions') {
+            loadPermissions();
+        }
+    });
+}
+
+function loadPermissions() {
+    // Load employees for selection (from employees table, not users)
+    database.ref('employees').once('value', (snapshot) => {
+        const employees = snapshot.val();
+        const select = document.getElementById('permissionEmployee');
+        
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">Selecione um funcionário</option>';
+        
+        if (employees) {
+            for (let employeeId in employees) {
+                const employee = employees[employeeId];
+                const option = document.createElement('option');
+                option.value = employeeId;
+                option.textContent = `${employee.name} - ${employee.storeName || 'Sem loja'}`;
+                select.appendChild(option);
+            }
+        }
+    });
+
+    // Load existing permissions
+    database.ref('permissions').once('value', (snapshot) => {
+        const permissions = snapshot.val();
+        const permissionsTable = document.getElementById('permissionsTable');
+        
+        if (!permissions || Object.keys(permissions).length === 0) {
+            permissionsTable.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center">
+                        <div class="empty-state">
+                            <p>Nenhuma permissão configurada</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        permissionsTable.innerHTML = '';
+        
+        for (let userId in permissions) {
+            const userPermissions = permissions[userId];
+            
+            // Get employee name
+            database.ref('employees/' + userId).once('value', (empSnapshot) => {
+                const employee = empSnapshot.val();
+                if (!employee) return;
+                
+                const tr = document.createElement('tr');
+                
+                const pagesText = userPermissions.pages.map(page => {
+                    const pageNames = {
+                        'tasks': '📋 Tarefas',
+                        'dashboard': '📊 Dashboard',
+                        'employees': '👥 Funcionários',
+                        'stores': '🏪 Lojas'
+                    };
+                    return pageNames[page] || page;
+                }).join(', ');
+                
+                tr.innerHTML = `
+                    <td>${employee.name}</td>
+                    <td>${employee.email}</td>
+                    <td>${pagesText}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deletePermissions('${userId}')" style="padding: 4px 8px; font-size: 12px;">
+                            🗑️ Remover
+                        </button>
+                    </td>
+                `;
+                
+                permissionsTable.appendChild(tr);
+            });
+        }
+    });
+}
+
+function handleSavePermissions(e) {
+    e.preventDefault();
+    
+    const employeeId = document.getElementById('permissionEmployee').value;
+    if (!employeeId) {
+        showNotification('❌ Selecione um funcionário!');
+        return;
+    }
+    
+    // Get selected permissions
+    const checkboxes = document.querySelectorAll('input[name="permissions"]:checked');
+    const pages = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Always include 'tasks' as it's mandatory
+    if (!pages.includes('tasks')) {
+        pages.push('tasks');
+    }
+    
+    const permissionData = {
+        pages: pages,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP,
+        updatedBy: currentUser.id
+    };
+    
+    database.ref('permissions/' + employeeId).set(permissionData).then(() => {
+        document.getElementById('permissionsForm').reset();
+        showNotification('✅ Permissões salvas com sucesso!');
+        loadPermissions();
+    }).catch((error) => {
+        showNotification('❌ Erro ao salvar permissões!');
+        console.error(error);
+    });
+}
+
+function deletePermissions(userId) {
+    if (confirm('Tem certeza que deseja remover as permissões personalizadas deste funcionário?')) {
+        database.ref('permissions/' + userId).remove().then(() => {
+            showNotification('✅ Permissões removidas com sucesso!');
+            loadPermissions();
+        }).catch((error) => {
+            showNotification('❌ Erro ao remover permissões!');
+            console.error(error);
+        });
+    }
 }
 
 function initializeDefaultData() {

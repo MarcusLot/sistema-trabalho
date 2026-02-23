@@ -7,426 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #64748b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --background: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --text-light: #64748b;
-            --border: #e2e8f0;
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--background);
-            color: var(--text);
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 16px;
-        }
-
-        /* Login Screen */
-        .login-screen {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        }
-
-        .login-card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 32px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .login-header h1 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 8px;
-        }
-
-        .login-header p {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text);
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.2s;
-            background: var(--card);
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
-
-        /* Main App */
-        .app-screen {
-            display: none;
-            min-height: 100vh;
-        }
-
-        .header {
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        /* Navigation */
-        .nav {
-            background: var(--card);
-            border-bottom: 1px solid var(--border);
-            padding: 0;
-        }
-
-        .nav-list {
-            display: flex;
-            list-style: none;
-            overflow-x: auto;
-        }
-
-        .nav-item {
-            flex-shrink: 0;
-        }
-
-        .nav-link {
-            display: block;
-            padding: 16px 20px;
-            color: var(--text-light);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .nav-link.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        /* Content */
-        .content {
-            padding: 24px 0;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        .page-header {
-            margin-bottom: 24px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        /* Cards */
-        .card {
-            background: var(--card);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-
-        .card-header {
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .card-description {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        /* Forms */
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        /* Tables */
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
-
-        .table th {
-            font-weight: 600;
-            color: var(--text-light);
-            background: var(--background);
-        }
-
-        /* Stats */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 4px;
-        }
-
-        .stat-label {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        /* Task List */
-        .task-list {
-            list-style: none;
-        }
-
-        .task-item {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-            transition: all 0.2s;
-        }
-
-        .task-item:hover {
-            box-shadow: var(--shadow);
-        }
-
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 8px;
-        }
-
-        .task-recipient {
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .task-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-completed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .header-content {
-                flex-direction: column;
-                gap: 16px;
-                text-align: center;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .task-header {
-                flex-direction: column;
-                gap: 8px;
-            }
-        }
-
-        /* Utilities */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 48px 24px;
-            color: var(--text-light);
-        }
-
-        .empty-state svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Login Screen -->
@@ -445,15 +26,14 @@
                     <label for="loginPassword">Senha</label>
                     <input type="password" id="loginPassword" placeholder="••••••••" required>
                 </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe">Lembre-me</label>
+                </div>
                 <button type="submit" class="btn btn-primary">
                     🚀 Entrar
                 </button>
             </form>
-            <div style="margin-top: 24px; text-align: center;">
-                <p style="font-size: 14px; color: var(--text-light);">
-                    Acesso inicial: admin@admin.com / admin123
-                </p>
-            </div>
         </div>
     </div>
 
@@ -477,9 +57,9 @@
                 <ul class="nav-list" id="navList">
                     <li class="nav-item"><a href="#" class="nav-link active" data-page="dashboard">📊 Dashboard</a></li>
                     <li class="nav-item"><a href="#" class="nav-link" data-page="tasks">📋 Tarefas</a></li>
-                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="employees">👥 Funcionários</a></li>
+                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="people">👥 Pessoas</a></li>
                     <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="stores">🏪 Lojas</a></li>
-                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="users">🔐 Usuários</a></li>
+                    <li class="nav-item nav-admin-only hidden"><a href="#" class="nav-link" data-page="permissions">⚙️ Permissões</a></li>
                     <li class="nav-item"><a href="#" class="nav-link" id="logoutBtn">🚪 Sair</a></li>
                 </ul>
             </div>
@@ -546,9 +126,9 @@
                         <form id="createTaskForm">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="taskEmployee">Funcionário</label>
+                                    <label for="taskEmployee">Destinatário</label>
                                     <select id="taskEmployee" required>
-                                        <option value="">Selecione um funcionário</option>
+                                        <option value="">Selecione um destinatário</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -587,183 +167,14 @@
                     </div>
                 </div>
 
-                <!-- Employees Page -->
-                <div class="page" id="employeesPage">
+                <!-- People Page -->
+                <div class="page" id="peoplePage">
                     <div class="page-header">
-                        <h1 class="page-title">Funcionários</h1>
-                        <p class="page-subtitle">Gerencie os funcionários do sistema</p>
+                        <h1 class="page-title">Pessoas</h1>
+                        <p class="page-subtitle">Gerencie funcionários e usuários do sistema</p>
                     </div>
 
                     <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Adicionar Funcionário</h3>
-                            <p class="card-description">Cadastre um novo funcionário no sistema</p>
-                        </div>
-                        <form id="createEmployeeForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="employeeName">Nome Completo</label>
-                                    <input type="text" id="employeeName" placeholder="Nome do funcionário" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="employeeStore">Loja</label>
-                                    <select id="employeeStore" required>
-                                        <option value="">Selecione uma loja</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="employeeEmail">Email</label>
-                                    <input type="email" id="employeeEmail" placeholder="email@exemplo.com" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="employeePhone">Telefone</label>
-                                    <input type="tel" id="employeePhone" placeholder="(00) 00000-0000">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                ➕ Adicionar Funcionário
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Funcionários Cadastrados</h3>
-                            <p class="card-description">Lista de todos os funcionários</p>
-                        </div>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Email</th>
-                                    <th>Loja</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="employeesTable">
-                                <tr>
-                                    <td colspan="5" class="text-center">
-                                        <div class="empty-state">
-                                            <p>Nenhum funcionário cadastrado</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Stores Page -->
-                <div class="page" id="storesPage">
-                    <div class="page-header">
-                        <h1 class="page-title">Lojas</h1>
-                        <p class="page-subtitle">Gerencie as lojas do sistema</p>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Adicionar Loja</h3>
-                            <p class="card-description">Cadastre uma nova loja no sistema</p>
-                        </div>
-                        <form id="createStoreForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="storeName">Nome da Loja</label>
-                                    <input type="text" id="storeName" placeholder="Nome da loja" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="storeCode">Código</label>
-                                    <input type="text" id="storeCode" placeholder="Código único" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="storeAddress">Endereço</label>
-                                <input type="text" id="storeAddress" placeholder="Endereço completo">
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                ➕ Adicionar Loja
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Lojas Cadastradas</h3>
-                            <p class="card-description">Lista de todas as lojas</p>
-                        </div>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Código</th>
-                                    <th>Endereço</th>
-                                    <th>Funcionários</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="storesTable">
-                                <tr>
-                                    <td colspan="5" class="text-center">
-                                        <div class="empty-state">
-                                            <p>Nenhuma loja cadastrada</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Users Page -->
-                <div class="page" id="usersPage">
-                    <div class="page-header">
-                        <h1 class="page-title">Usuários</h1>
-                        <p class="page-subtitle">Gerencie os usuários e senhas do sistema</p>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Criar Novo Usuário</h3>
-                            <p class="card-description">Adicione um novo usuário ao sistema</p>
-                        </div>
-                        <form id="createUserForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="userEmail">Email</label>
-                                    <input type="email" id="userEmail" placeholder="email@exemplo.com" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="userPassword">Senha</label>
-                                    <input type="password" id="userPassword" placeholder="Mínimo 6 caracteres" required>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="userName">Nome Completo</label>
-                                    <input type="text" id="userName" placeholder="Nome do usuário" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="userRole">Tipo de Usuário</label>
-                                    <select id="userRole" required>
-                                        <option value="employee">Funcionário</option>
-                                        <option value="admin">Administrador</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">
-                                ➕ Criar Usuário
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Usuários Cadastrados</h3>
-                            <p class="card-description">Lista de todos os usuários do sistema</p>
-                        </div>
                         <table class="table">
                             <thead>
                                 <tr>
@@ -771,14 +182,102 @@
                                     <th>Email</th>
                                     <th>Tipo</th>
                                     <th>Status</th>
+                                    <th>Loja</th>
+                                    <th>Telefone</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="usersTable">
+                            <tbody id="peopleTable">
                                 <tr>
-                                    <td colspan="5" class="text-center">
+                                    <td colspan="7" class="text-center">
                                         <div class="empty-state">
-                                            <p>Nenhum usuário encontrado</p>
+                                            <p>Nenhuma pessoa cadastrada</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Permissions Page -->
+                <div class="page" id="permissionsPage">
+                    <div class="page-header">
+                        <h1 class="page-title">Permissões de Funcionários</h1>
+                        <p class="page-subtitle">Gerencie o acesso dos funcionários às funcionalidades</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Configurar Permissões</h3>
+                            <p class="card-description">Selecione quais abas cada funcionário pode acessar</p>
+                        </div>
+                        <form id="permissionsForm">
+                            <div class="form-group">
+                                <label for="permissionEmployee">Funcionário</label>
+                                <select id="permissionEmployee" required>
+                                    <option value="">Selecione um funcionário</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Abas Permitidas</label>
+                                <div class="permissions-grid">
+                                    <div class="permission-item">
+                                        <label class="permission-checkbox">
+                                            <input type="checkbox" name="permissions" value="tasks" checked disabled>
+                                            <span class="permission-icon">📋</span>
+                                            <span class="permission-text">Minhas Tarefas</span>
+                                            <span class="permission-badge">sempre ativo</span>
+                                        </label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <label class="permission-checkbox">
+                                            <input type="checkbox" name="permissions" value="dashboard">
+                                            <span class="permission-icon">📊</span>
+                                            <span class="permission-text">Dashboard</span>
+                                        </label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <label class="permission-checkbox">
+                                            <input type="checkbox" name="permissions" value="employees">
+                                            <span class="permission-icon">👥</span>
+                                            <span class="permission-text">Funcionários</span>
+                                        </label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <label class="permission-checkbox">
+                                            <input type="checkbox" name="permissions" value="stores">
+                                            <span class="permission-icon">🏪</span>
+                                            <span class="permission-text">Lojas</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                💾 Salvar Permissões
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Permissões Atuais</h3>
+                            <p class="card-description">Lista de permissões configuradas</p>
+                        </div>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Funcionário</th>
+                                    <th>Email</th>
+                                    <th>Abas Permitidas</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionsTable">
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="empty-state">
+                                            <p>Nenhuma permissão configurada</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -788,6 +287,119 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Adicionar Funcionário</h2>
+                <button class="modal-close" onclick="closeModal('addEmployeeModal')">&times;</button>
+            </div>
+            <form id="modalEmployeeForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modalEmployeeName">Nome Completo</label>
+                        <input type="text" id="modalEmployeeName" placeholder="Nome do funcionário" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalEmployeeStore">Loja</label>
+                        <select id="modalEmployeeStore" required>
+                            <option value="">Selecione uma loja</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modalEmployeeEmail">Email</label>
+                        <input type="email" id="modalEmployeeEmail" placeholder="email@exemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalEmployeePhone">Telefone</label>
+                        <input type="tel" id="modalEmployeePhone" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modalEmployeePassword">Senha</label>
+                        <input type="password" id="modalEmployeePassword" placeholder="Mínimo 6 caracteres" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalEmployeeRole">Tipo de Usuário</label>
+                        <select id="modalEmployeeRole" required>
+                            <option value="employee">Funcionário</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addEmployeeModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar Funcionário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="permissionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gerenciar Permissões</h2>
+                <button class="modal-close" onclick="closeModal('permissionsModal')">&times;</button>
+            </div>
+            <form id="modalPermissionsForm">
+                <div class="form-group">
+                    <label for="modalPermissionEmployee">Funcionário</label>
+                    <select id="modalPermissionEmployee" required>
+                        <option value="">Selecione um funcionário</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Abas Permitidas</label>
+                    <div class="permissions-grid">
+                        <div class="permission-item">
+                            <label class="permission-checkbox">
+                                <input type="checkbox" name="modalPermissions" value="tasks" checked disabled>
+                                <span class="permission-icon">📋</span>
+                                <span class="permission-text">Minhas Tarefas</span>
+                                <span class="permission-badge">sempre ativo</span>
+                            </label>
+                        </div>
+                        <div class="permission-item">
+                            <label class="permission-checkbox">
+                                <input type="checkbox" name="modalPermissions" value="dashboard">
+                                <span class="permission-icon">📊</span>
+                                <span class="permission-text">Dashboard</span>
+                            </label>
+                        </div>
+                        <div class="permission-item">
+                            <label class="permission-checkbox">
+                                <input type="checkbox" name="modalPermissions" value="employees">
+                                <span class="permission-icon">👥</span>
+                                <span class="permission-text">Funcionários</span>
+                            </label>
+                        </div>
+                        <div class="permission-item">
+                            <label class="permission-checkbox">
+                                <input type="checkbox" name="modalPermissions" value="stores">
+                                <span class="permission-icon">🏪</span>
+                                <span class="permission-text">Lojas</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('permissionsModal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Permissões</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <div class="fab-container">
+        <button class="fab fab-primary" onclick="showAddEmployeeModal()" title="Adicionar Funcionário">
+            +
+        </button>
     </div>
 
     <script src="script.js"></script>
