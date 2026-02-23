@@ -1087,17 +1087,7 @@ function handleCreateEmployee(e) {
     database.ref('stores/' + storeId).once('value', (snapshot) => {
         const store = snapshot.val();
         
-        // Criar funcionário
-        const employee = {
-            name: name,
-            storeId: storeId,
-            storeName: store.name,
-            email: email,
-            phone: phone,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        // Criar usuário para login
+        // Criar usuário para login primeiro para obter o ID
         const user = {
             email: email,
             password: password,
@@ -1106,19 +1096,35 @@ function handleCreateEmployee(e) {
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
         
-        // Salvar ambos os registros
-        Promise.all([
-            database.ref('employees').push(employee),
-            database.ref('users').push(user)
-        ]).then(() => {
-            document.getElementById('modalEmployeeForm').reset();
-            closeModal('addEmployeeModal');
-            showNotification('✅ Funcionário e usuário criados com sucesso!');
-            loadEmployees();
-            loadUsers();
-            loadDashboardData();
+        // Salvar usuário primeiro para obter o ID
+        database.ref('users').push(user).then((userSnapshot) => {
+            const userId = userSnapshot.key;
+            
+            // Criar funcionário com o MESMO ID
+            const employee = {
+                name: name,
+                storeId: storeId,
+                storeName: store.name,
+                email: email,
+                phone: phone,
+                userId: userId, // Referência para o usuário
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            // Salvar funcionário com o ID do usuário
+            database.ref('employees/' + userId).set(employee).then(() => {
+                document.getElementById('modalEmployeeForm').reset();
+                closeModal('addEmployeeModal');
+                showNotification('✅ Funcionário e usuário criados com sucesso!');
+                loadEmployees();
+                loadUsers();
+                loadDashboardData();
+            }).catch((error) => {
+                showNotification('❌ Erro ao criar funcionário!');
+                console.error(error);
+            });
         }).catch((error) => {
-            showNotification('❌ Erro ao criar funcionário!');
+            showNotification('❌ Erro ao criar usuário!');
             console.error(error);
         });
     });
